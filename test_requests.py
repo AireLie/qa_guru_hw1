@@ -15,6 +15,7 @@ def test_get_user():
     expected_data = users_data[user_id]
 
     response = requests.get(url)
+    assert response.status_code == 200
     body = response.json()
 
     assert body['id'] == expected_data['id']
@@ -26,6 +27,7 @@ def test_create_user():
     url = f"{base_url}/users"
 
     response = requests.post(url, json=user)
+    assert response.status_code == 200
     body = response.json()
 
     assert body == user
@@ -37,6 +39,7 @@ def test_update_user():
     updated_data = {"id": 2, "email": "updated.user@test.com"}
 
     response = requests.put(url, json=updated_data)
+    assert response.status_code == 200
     body = response.json()
 
     assert body == updated_data
@@ -65,6 +68,7 @@ def test_login():
     credentials = {"email": "eve.holt@reqres.in", "password": "cityslicka"}
 
     response = requests.post(url, json=credentials)
+    assert response.status_code == 200
     body = response.json()
 
     assert "token" in body
@@ -75,9 +79,9 @@ def test_get_non_existent_user():
     url = f"{base_url}/users/{user_id}"
 
     response = requests.get(url)
+    assert response.status_code == 404
     body = response.json()
 
-    assert response.status_code == 404
     assert body["detail"] == "User not found"
 
 
@@ -87,9 +91,9 @@ def test_update_non_existent_user():
     updated_data = {"id": 1000, "email": "non.existent.user@test.com"}
 
     response = requests.put(url, json=updated_data)
+    assert response.status_code == 404
     body = response.json()
 
-    assert response.status_code == 404
     assert body["detail"] == "User not found"
 
 
@@ -98,8 +102,9 @@ def test_delete_non_existent_user():
     url = f"{base_url}/users/{user_id}"
 
     response = requests.delete(url)
-    body = response.json()
     assert response.status_code == 404
+    body = response.json()
+
     assert body["detail"] == "User not found"
 
 
@@ -108,7 +113,7 @@ def test_login_with_wrong_credentials():
     credentials = {"email": "wrong.email@test.com", "password": "wrongpassword"}
 
     response = requests.post(url, json=credentials)
+    assert response.status_code == 401
     body = response.json()
 
-    assert response.status_code == 401
     assert body["detail"] == "Bad credentials"
