@@ -16,7 +16,7 @@ try:
     from app.app_status import AppStatus
 except ImportError:
     # Абсолютный импорт (при прямом запуске файла)
-    from user import User, UserCreate, LoginData, Token
+    from User import User, UserCreate, LoginData, Token
     from app_status import AppStatus
 
 app = FastAPI()
