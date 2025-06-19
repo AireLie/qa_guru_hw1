@@ -1,14 +1,11 @@
 import json
-import sys
 from http import HTTPStatus
-from math import ceil
 from pathlib import Path
 from typing import List
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi_pagination import Page, add_pagination
-
+from fastapi_pagination import Page, add_pagination, paginate
 
 try:
     # Попытка относительного импорта (при запуске как модуля)
@@ -23,10 +20,6 @@ app = FastAPI()
 users: List[User] = []
 
 
-class CustomPage(Page[User]):
-    pages: int
-
-
 def load_users():
     """Загружает пользователей из JSON файла"""
     global users
@@ -34,22 +27,6 @@ def load_users():
     with open(file_path, "r") as f:
         users_data = json.load(f)
         users = [User(**user) for user in users_data]
-
-
-def custom_paginate(sequence: List[User], page: int = 1, size: int = 10) -> CustomPage:
-    """Реализация пагинации с расчетом количества страниц"""
-    total = len(sequence)
-    start = (page - 1) * size
-    end = start + size
-    items = sequence[start:end]
-
-    return CustomPage(
-        items=items,
-        total=total,
-        page=page,
-        size=size,
-        pages=ceil(total / size) if size else 1
-    )
 
 
 @app.get("/status", status_code=HTTPStatus.OK)
@@ -74,10 +51,9 @@ def app_status() -> AppStatus:
         return AppStatus(users=False)
 
 
-@app.get("/api/users", response_model=CustomPage)
-def get_users(page: int = 1, size: int = 10):
-    """Получение списка пользователей с пагинацией"""
-    return custom_paginate(users, page, size)
+@app.get("/api/users", response_model=Page[User], status_code=HTTPStatus.OK)
+def get_users():
+    return paginate(users)
 
 
 @app.get("/api/users/{user_id}", response_model=User)
@@ -166,14 +142,12 @@ def register(user: UserCreate) -> Token:
     return Token(token="QpwL5tke4Pnpja7X4")
 
 
-if __name__ == "__main__":
-    # Добавляем путь к родительской директории в PYTHONPATH
-    sys.path.insert(0, str(Path(__file__).parent.parent))
+add_pagination(app)
 
+
+if __name__ == "__main__":
     # Инициализация
     load_users()
     print(f"Loaded {len(users)} users")
-    add_pagination(app)
-
     # Запуск сервера
-    uvicorn.run("app.main:app", host="localhost", port=8000, reload=True)
+    uvicorn.run(app, host="localhost", port=8000)
