@@ -5,6 +5,13 @@ from math import ceil
 from typing import Set
 
 
+@pytest.fixture
+def total_users_count(app_url):
+    """Получаем фактическое количество пользователей из API"""
+    response = requests.get(f"{app_url}/api/users")
+    return response.json()["total"]
+
+
 def test_pagination_structure_validation(app_url):
     """Тест структуры ответа с валидацией через Pydantic"""
     response = requests.get(f"{app_url}/api/users")
@@ -26,11 +33,10 @@ def test_pagination_structure_validation(app_url):
 
 
 @pytest.mark.parametrize("page_size", [1, 3, 5, 6, 10])
-def test_pagination_page_size(app_url, test_users, page_size):
+def test_pagination_page_size(app_url, total_users_count, page_size):
     """Тест пагинации с разными размерами страниц"""
-    total_users = len(test_users)
-    expected_pages = ceil(total_users / page_size)
-    expected_items = min(page_size, total_users)
+    expected_pages = ceil(total_users_count / page_size)
+    expected_items = min(page_size, total_users_count)
 
     response = requests.get(f"{app_url}/api/users", params={"size": page_size})
     assert response.status_code == HTTPStatus.OK
@@ -38,7 +44,7 @@ def test_pagination_page_size(app_url, test_users, page_size):
 
     # Проверяем точное количество элементов
     assert len(data["items"]) == expected_items
-    assert data["total"] == total_users
+    assert data["total"] == total_users_count
     assert data["pages"] == expected_pages
     assert data["size"] == page_size
     assert data["page"] == 1
@@ -49,10 +55,9 @@ def test_pagination_page_size(app_url, test_users, page_size):
     (1, 3), (2, 3), (3, 3),  # Разные комбинации
     (1, 6), (1, 10)  # Размер больше, чем данных
 ])
-def test_pagination_different_pages(app_url, test_users, page, size):
+def test_pagination_different_pages(app_url, total_users_count, page, size):
     """Тест, что разные страницы возвращают разные данные"""
-    total_users = len(test_users)
-    expected_pages = ceil(total_users / size)
+    expected_pages = ceil(total_users_count / size)
 
     # Получаем данные для страницы
     response = requests.get(f"{app_url}/api/users", params={"page": page, "size": size})
@@ -63,21 +68,21 @@ def test_pagination_different_pages(app_url, test_users, page, size):
     if page < expected_pages:
         assert len(data["items"]) == size
     elif page == expected_pages:
-        assert len(data["items"]) == (total_users % size or size)
+        assert len(data["items"]) == (total_users_count % size or size)
     else:
         assert len(data["items"]) == 0
 
     # Проверяем, что все элементы уникальны (нет дубликатов)
     all_ids = [item["id"] for item in data["items"]]
-    assert len(all_ids) == len(set(all_ids))  # Проверка на уникальность
+    assert len(all_ids) == len(set(all_ids))
 
 
 def test_pagination_unique_items_across_pages(app_url):
-    """Тест, что элементы на разных страницах не повторяются"""
+    """Тест что элементы на разных страницах не повторяются"""
     page_size = 3
     seen_ids: Set[int] = set()
 
-    # Проверяем первые 3 страницы (больше чем реально существует)
+    # Проверяем первые 3 страницы (больше, чем реально существует)
     for page in [1, 2, 3]:
         response = requests.get(f"{app_url}/api/users", params={"page": page, "size": page_size})
         assert response.status_code == HTTPStatus.OK
@@ -92,19 +97,17 @@ def test_pagination_unique_items_across_pages(app_url):
         seen_ids.update(current_ids)
 
 
-def test_pagination_edge_cases(app_url, test_users):
+def test_pagination_edge_cases(app_url, total_users_count):
     """Тест граничных случаев пагинации"""
-    total_users = len(test_users)
-
     # Страница больше, чем всего страниц
     response = requests.get(f"{app_url}/api/users", params={"page": 100, "size": 2})
     assert response.status_code == HTTPStatus.OK
     assert len(response.json()["items"]) == 0
 
     # Размер страницы больше, чем всего элементов
-    response = requests.get(f"{app_url}/api/users", params={"size": total_users + 10})
+    response = requests.get(f"{app_url}/api/users", params={"size": total_users_count + 10})
     assert response.status_code == HTTPStatus.OK
-    assert len(response.json()["items"]) == total_users
+    assert len(response.json()["items"]) == total_users_count
     assert response.json()["pages"] == 1
 
     # Нулевой размер страницы (должен вернуть ошибку)
@@ -112,8 +115,8 @@ def test_pagination_edge_cases(app_url, test_users):
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
-def test_pagination_default_values(app_url, test_users):
-    """Тест значений по умолчанию"""
+def test_pagination_default_values(app_url, total_users_count):
+    """Тест значений по-умолчанию"""
     response = requests.get(f"{app_url}/api/users")
     assert response.status_code == HTTPStatus.OK
     data = response.json()
@@ -126,6 +129,6 @@ def test_pagination_default_values(app_url, test_users):
     assert "pages" in data
 
     # Проверяем, что все пользователи вернулись (по-умолчанию)
-    assert len(data["items"]) == len(test_users)
-    assert data["total"] == len(test_users)
+    assert len(data["items"]) == total_users_count
+    assert data["total"] == total_users_count
     assert data["pages"] == 1
