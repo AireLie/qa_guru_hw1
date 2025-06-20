@@ -81,6 +81,7 @@ project/
 ├── tests/
 │   ├── conftest.py     # Фикстуры для тестов
 │   ├── test_requests.py # Основные тесты API
+│   ├── test_pagination.py # Основные тесты пагинации
 │   └── test_smoke.py   # Smoke-тесты
 ├── data/
 │   └── users.json      # Данные пользователей

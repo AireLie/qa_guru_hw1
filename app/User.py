@@ -1,24 +1,24 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, HttpUrl
 
 
 class User(BaseModel):
     id: int
-    email: str
+    email: EmailStr
     first_name: str
     last_name: str
-    avatar: str
+    avatar: HttpUrl
 
 
 class UserCreate(BaseModel):
-    email: str
+    email: EmailStr
     first_name: str
     last_name: str
-    avatar: str
+    avatar: HttpUrl
     password: str
 
 
 class LoginData(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 

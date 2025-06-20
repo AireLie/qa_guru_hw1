@@ -1,7 +1,9 @@
 import os
 import pytest
 import dotenv
+import json
 
+from pathlib import Path
 
 @pytest.fixture(autouse=True)
 def envs():
@@ -18,8 +20,11 @@ def app_url():
 
 @pytest.fixture
 def test_users():
-    import json
-    from pathlib import Path
     file_path = Path(__file__).parent.parent / "data" / "users.json"
     with open(file_path, "r") as f:
         return json.load(f)
+
+
+@pytest.fixture
+def total_users_count(test_users):
+    return len(test_users)
